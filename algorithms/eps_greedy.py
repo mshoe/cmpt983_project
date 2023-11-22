@@ -16,6 +16,10 @@ class eps_greedy(BanditAlgorithm):
         # called once a round
         return self._initial_eps
     
+    @abc.abstractmethod
+    def _arm_added_event(self):
+        return
+    
     def run_alg(self, T: int):
         bandit_machine = copy.deepcopy(self._bandit_machine)
 
@@ -48,6 +52,7 @@ class eps_greedy(BanditAlgorithm):
                 sample_pulls.resize(num_arms)
                 best_mean, best_arm = bandit_machine.get_max_mean()
                 all_arms_pulled_once = False
+                self._arm_added_event()
 
             # exploit or explore
             val = random.random()
@@ -87,6 +92,7 @@ class eps_greedy(BanditAlgorithm):
 class decay_eps_greedy(eps_greedy):
     def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_factor):
         super().__init__(_bandit_machine, initial_eps)
+        self._initial_eps = initial_eps
         self._curr_eps = initial_eps
         self._decay_factor = decay_factor
         return
@@ -95,3 +101,41 @@ class decay_eps_greedy(eps_greedy):
         eps = self._curr_eps
         self._curr_eps *= self._decay_factor
         return eps
+    
+    def _arm_added_event(self):
+        self._curr_eps = self._initial_eps
+        return
+    
+class decay_eps_greedy(eps_greedy):
+    def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_factor):
+        super().__init__(_bandit_machine, initial_eps)
+        self._initial_eps = initial_eps
+        self._curr_eps = initial_eps
+        self._decay_factor = decay_factor
+        return
+    
+    def _get_eps(self, t):
+        eps = self._curr_eps
+        self._curr_eps *= self._decay_factor
+        return eps
+    
+    def _arm_added_event(self):
+        self._curr_eps = self._initial_eps
+        return
+    
+class decay_eps_greedy2(eps_greedy):
+    def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_constant):
+        super().__init__(_bandit_machine, initial_eps)
+        self._initial_eps = initial_eps
+        self._decay_constant = decay_constant
+        self._t = 0.0
+        return
+    
+    def _get_eps(self, t):
+        self._t += 1.0
+        eps = self._decay_constant / self._t
+        return eps
+    
+    def _arm_added_event(self):
+        self._t = 0.0
+        return
