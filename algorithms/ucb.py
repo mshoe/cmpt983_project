@@ -1,10 +1,10 @@
 import numpy as np
 import random
 from util.bandit_util import BanditMachine
-from util.bandit_algorithm import bandit_algorithm
+from util.bandit_algorithm import BanditAlgorithm
 import copy
 import abc
-class ucb(bandit_algorithm):
+class ucb(BanditAlgorithm):
     def __init__(self, _bandit_machine: BanditMachine):
         self._bandit_machine = copy.deepcopy(_bandit_machine)
         return

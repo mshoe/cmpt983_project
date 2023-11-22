@@ -1,11 +1,11 @@
 import numpy as np
 import random
 from util.bandit_util import BanditMachine
-from util.bandit_algorithm import bandit_algorithm
+from util.bandit_algorithm import BanditAlgorithm
 import copy
 import abc
 
-class eps_greedy(bandit_algorithm):
+class eps_greedy(BanditAlgorithm):
     def __init__(self, _bandit_machine: BanditMachine, initial_eps):
         self._initial_eps = initial_eps
         self._bandit_machine = copy.deepcopy(_bandit_machine)

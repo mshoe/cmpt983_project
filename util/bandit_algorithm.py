@@ -2,7 +2,7 @@ from util.bandit_util import BanditArm, BanditMachine
 import abc
 import numpy as np
 
-class bandit_algorithm:
+class BanditAlgorithm:
 
     def __init__(self):
         return
