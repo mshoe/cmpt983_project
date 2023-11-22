@@ -1,12 +1,10 @@
-from bandit_util import DeterministicArmAcquiringMachine, StandardBanditMachine, GaussianBanditArm, BernoulliBanditArm
-from eps_greedy import const_eps_greedy, decay_eps_greedy
-from ucb import ucb
-from auer import auer
+from util.bandit_util import DeterministicArmAcquiringMachine, StandardBanditMachine, GaussianBanditArm, BernoulliBanditArm
+from algorithms.eps_greedy import eps_greedy, decay_eps_greedy
+from algorithms.ucb import ucb_basic, auer, ucb_AO
 import matplotlib.pyplot as plt
 import numpy as np
 
 num_rounds = 100000
-eps = 0.1
 
 initial_arms = [BernoulliBanditArm(0.5), BernoulliBanditArm(0.3)]
 additional_arms = [BernoulliBanditArm(0.6), BernoulliBanditArm(0.2), BernoulliBanditArm(0.8)]
@@ -16,71 +14,39 @@ addition_times = [num_rounds // 4, num_rounds // 2, 3*num_rounds//4]
 bandit_machine = DeterministicArmAcquiringMachine(initial_arms, additional_arms, addition_times)
 
 num_trials = 20
-eps_avg_regret_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-eps_avg_total_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-eps_avg_total_best_exp_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-for trial in range(num_trials):
-    print("trial:", trial)
-    total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round = const_eps_greedy(bandit_machine, num_rounds, eps)
-
-    regret_per_round = total_best_exp_reward_per_round - total_exp_reward_per_round
-
-    #eps_avg_total_reward_per_round = (trial * eps_avg_total_reward_per_round + total_reward_per_round) / (trial + 1.0)
-    eps_avg_total_best_exp_reward_per_round = (trial * eps_avg_total_best_exp_reward_per_round + total_best_exp_reward_per_round) / (trial + 1.0)
-    eps_avg_regret_per_round = (trial * eps_avg_regret_per_round + regret_per_round) / (trial + 1.0)
-
 # UCB test
-ucb_avg_regret_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-ucb_avg_total_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-ucb_avg_total_best_exp_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-for trial in range(num_trials):
-    print("trial:", trial)
-    total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round = ucb(bandit_machine, num_rounds)
-
-    regret_per_round = total_best_exp_reward_per_round - total_exp_reward_per_round
-
-    #ucb_avg_total_reward_per_round = (trial * ucb_avg_total_reward_per_round + total_reward_per_round) / (trial + 1.0)
-    ucb_avg_total_best_exp_reward_per_round = (trial * ucb_avg_total_best_exp_reward_per_round + total_best_exp_reward_per_round) / (trial + 1.0)
-    ucb_avg_regret_per_round = (trial * ucb_avg_regret_per_round + regret_per_round) / (trial + 1.0)
-
-
-# decaying eps-greedy test
-eps2_avg_regret_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-eps2_avg_total_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-eps2_avg_total_best_exp_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-for trial in range(num_trials):
-    print("trial:", trial)
-    total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round = decay_eps_greedy(bandit_machine, num_rounds, 0.1)
-
-    regret_per_round = total_best_exp_reward_per_round - total_exp_reward_per_round
-
-    #ucb_avg_total_reward_per_round = (trial * ucb_avg_total_reward_per_round + total_reward_per_round) / (trial + 1.0)
-    eps2_avg_total_best_exp_reward_per_round = (trial * eps2_avg_total_best_exp_reward_per_round + total_best_exp_reward_per_round) / (trial + 1.0)
-    eps2_avg_regret_per_round = (trial * eps2_avg_regret_per_round + regret_per_round) / (trial + 1.0)
-
+print("Running UCB tests")
+ucb_alg = ucb_basic(bandit_machine, num_rounds)
+ucb_regret, ucb_reward, ucb_exp_reward, ucb_best_exp_reward = ucb_alg.run_experiment(num_trials, num_rounds)
 
 # AUER test
-auer_avg_regret_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-auer_avg_total_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-auer_avg_total_best_exp_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
-for trial in range(num_trials):
-    print("trial:", trial)
-    total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round = auer(bandit_machine, num_rounds)
+print("Running AUER tests")
+auer_alg = auer(bandit_machine)
+auer_regret, auer_reward, auer_exp_reward, auer_best_exp_reward = auer_alg.run_experiment(num_trials, num_rounds)
 
-    regret_per_round = total_best_exp_reward_per_round - total_exp_reward_per_round
+# UCB - Asymptotically Optimal
+print("Running UCB AO tests")
+ucbao_alg = ucb_AO(bandit_machine)
+ucbao_regret, ucbao_reward, ucbao_exp_reward, ucbao_best_exp_reward = ucbao_alg.run_experiment(num_trials, num_rounds)
 
-    #ucb_avg_total_reward_per_round = (trial * ucb_avg_total_reward_per_round + total_reward_per_round) / (trial + 1.0)
-    auer_avg_total_best_exp_reward_per_round = (trial * ucb_avg_total_best_exp_reward_per_round + total_best_exp_reward_per_round) / (trial + 1.0)
-    auer_avg_regret_per_round = (trial * auer_avg_regret_per_round + regret_per_round) / (trial + 1.0)
+# eps-greedy test
+print("Running eps greedy tests")
+initial_eps = 0.5
+epsg_alg = eps_greedy(bandit_machine, initial_eps)
+epsg_regret, epsg_reward, epsg_exp_reward, epsg_best_exp_reward = epsg_alg.run_experiment(num_trials, num_rounds)
+
+# decay eps-greedy test
+print("Running decay eps greedy tests")
+decay_factor = 0.99
+depsg_alg = decay_eps_greedy(bandit_machine, initial_eps, decay_factor)
+depsg_regret, depsg_reward, depsg_exp_reward, depsg_best_exp_reward = depsg_alg.run_experiment(num_trials, num_rounds)
 
 
-# Note: this is not a fair comparison because avg_total_best_exp_reward_per_round2 > avg_total_best_exp_reward_per_round,
-# since the standard bandit machine has all arms at the start.
-# So this comparison is kinda pointless.
-plt.plot(eps_avg_regret_per_round, 'r', label="eps-greedy")
-plt.plot(ucb_avg_regret_per_round, 'b', label="ucb")
-plt.plot(eps2_avg_regret_per_round, 'g', label="decay-eps-greedy")
-plt.plot(auer_avg_regret_per_round, 'purple', label="auer")
+plt.plot(ucb_regret, 'b', label="ucb")
+plt.plot(auer_regret, 'purple', label="auer")
+plt.plot(ucbao_regret, 'orange', label="ucb-ao")
+plt.plot(epsg_regret, 'r', label="eps-greedy")
+plt.plot(depsg_regret, 'g', label="decay-eps-greedy")
 plt.xlabel('t')
 plt.ylabel('Regret')
 plt.title('Regret vs t')
@@ -88,11 +54,11 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-plt.plot(ucb_avg_total_best_exp_reward_per_round, 'b', label="eps")
-plt.plot(ucb_avg_total_best_exp_reward_per_round, 'orange', label="ucb")
-plt.xlabel('t')
-plt.ylabel('reward')
-plt.title('Best expected reward per round (sanity check)')
-plt.legend()
-plt.grid(True)
-plt.show()
+# plt.plot(eps_avg_total_best_exp_reward_per_round, 'b', label="eps")
+# plt.plot(ucb_avg_total_best_exp_reward_per_round, 'orange', label="ucb")
+# plt.xlabel('t')
+# plt.ylabel('reward')
+# plt.title('Best expected reward per round (sanity check)')
+# plt.legend()
+# plt.grid(True)
+# plt.show()

@@ -1,4 +1,4 @@
-from bandit_util import GaussianBanditArm
+from util.bandit_util import GaussianBanditArm
 import numpy as np
 import matplotlib.pyplot as plt
 arm = GaussianBanditArm(0, 1)

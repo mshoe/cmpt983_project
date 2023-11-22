@@ -1,6 +1,8 @@
-from bandit_util import StandardBanditMachine, GaussianBanditArm
-from eps_greedy import const_eps_greedy
+from util.bandit_util import StandardBanditMachine, GaussianBanditArm
+from algorithms.eps_greedy import const_eps_greedy
 import matplotlib.pyplot as plt
+
+#NOTE: this file is out of date and will not run properly
 
 bandit_machine = StandardBanditMachine()
 bandit_machine.insert_arm(GaussianBanditArm(0.5, 0.2))

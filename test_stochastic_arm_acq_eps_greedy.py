@@ -1,7 +1,9 @@
-from bandit_util import StochasticGaussianArmAcquiringMachine
-from eps_greedy import const_eps_greedy
+from util.bandit_util import StochasticGaussianArmAcquiringMachine
+from algorithms.eps_greedy import const_eps_greedy
 import matplotlib.pyplot as plt
 import numpy as np
+
+#NOTE: this file is out of date and will not run properly
 
 acquire_probability = 0.002
 min_mean = 0.1
