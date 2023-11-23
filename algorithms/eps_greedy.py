@@ -8,6 +8,7 @@ import abc
 class eps_greedy(BanditAlgorithm):
     def __init__(self, _bandit_machine: BanditMachine, initial_eps):
         self._initial_eps = initial_eps
+        self._curr_eps = initial_eps
         self._bandit_machine = copy.deepcopy(_bandit_machine)
         return
     
@@ -38,6 +39,9 @@ class eps_greedy(BanditAlgorithm):
         # select arms until max rounds
         num_arms = init_num_arms
         all_arms_pulled_once = False
+        
+        self._curr_eps = self._initial_eps
+
         for t in range(0, T):
 
             # check if arms are acquired this round
@@ -48,14 +52,19 @@ class eps_greedy(BanditAlgorithm):
                 sample_pulls.resize(num_arms)
                 best_mean, best_arm = bandit_machine.get_max_mean()
                 all_arms_pulled_once = False
+                self._curr_eps = self._initial_eps
+
 
             # exploit or explore
             val = random.random()
+
             eps = self._get_eps(t)
+
             if val <= 1.0 - eps:
                 a = sample_means.argmax()
             else:
-                a = random.randint(0, num_arms-1)
+                a = np.argmin(sample_pulls)
+                # a = random.randint(0, num_arms-1)
 
             # mandatory exploration of unpulled arms
             if not all_arms_pulled_once:
@@ -95,3 +104,4 @@ class decay_eps_greedy(eps_greedy):
         eps = self._curr_eps
         self._curr_eps *= self._decay_factor
         return eps
+    
