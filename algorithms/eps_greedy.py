@@ -63,8 +63,8 @@ class eps_greedy(BanditAlgorithm):
             if val <= 1.0 - eps:
                 a = sample_means.argmax()
             else:
-                a = np.argmin(sample_pulls)
-                # a = random.randint(0, num_arms-1)
+                # a = np.argmin(sample_pulls)
+                a = random.randint(0, num_arms-1)
 
             # mandatory exploration of unpulled arms
             if not all_arms_pulled_once:
