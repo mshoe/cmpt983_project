@@ -87,8 +87,7 @@ class eps_greedy(BanditAlgorithm):
             total_best_exp_reward_per_round[t] = total_best_exp_reward
 
         return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round
-
-
+    
 class decay_eps_greedy(eps_greedy):
     def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_factor):
         super().__init__(_bandit_machine, initial_eps)
@@ -106,20 +105,7 @@ class decay_eps_greedy(eps_greedy):
         self._curr_eps = self._initial_eps
         return
     
-class decay_eps_greedy(eps_greedy):
-    def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_factor):
-        super().__init__(_bandit_machine, initial_eps)
-        self._initial_eps = initial_eps
-        self._curr_eps = initial_eps
-        self._decay_factor = decay_factor
-        return
-    
-    def _get_eps(self, t):
-        eps = self._curr_eps
-        self._curr_eps *= self._decay_factor
-        return eps
-    
-    def _arm_added_event(self):
+    def reset(self):
         self._curr_eps = self._initial_eps
         return
     
@@ -137,5 +123,9 @@ class decay_eps_greedy2(eps_greedy):
         return eps
     
     def _arm_added_event(self):
+        self._t = 0.0
+        return
+    
+    def reset(self):
         self._t = 0.0
         return
