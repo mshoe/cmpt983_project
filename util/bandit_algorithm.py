@@ -11,6 +11,10 @@ class BanditAlgorithm:
     def run_alg(self, T: int):
         return
     
+    @abc.abstractmethod
+    def reset(self):
+        return
+    
     def run_experiment(self, num_trials: int, num_rounds: int, verbose=True):
         avg_regret_per_round = np.zeros(shape=(num_rounds,), dtype=float)
         avg_total_reward_per_round = np.zeros(shape=(num_rounds,), dtype=float)
@@ -19,6 +23,7 @@ class BanditAlgorithm:
         for trial in range(num_trials):
             if verbose:
                 print("trial:", trial)
+            self.reset()
             total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round = self.run_alg(num_rounds)
 
             regret_per_round = total_best_exp_reward_per_round - total_exp_reward_per_round
