@@ -70,10 +70,27 @@ class StandardBanditMachine(BanditMachine):
     def acquire_arms(self):
         return False
     
-class StochasticGaussianArmAcquiringMachine(BanditMachine):
-    def __init__(self, acquire_probability, min_mean, max_mean, min_var, max_var):
+class StochasticArmAcquiringMachine(BanditMachine):
+    def __init__(self, acquire_probability):
         super().__init__()
         self._acquire_probability = acquire_probability
+        return
+    
+    @abc.abstractmethod
+    def generate_arm(self):
+        return
+    
+    def acquire_arms(self):
+        val = random.random()
+        if val < self._acquire_probability:
+            self.insert_arm(self.generate_arm())
+            return True
+        else:
+            return False
+    
+class StochasticGaussianArmAcquiringMachine(StochasticArmAcquiringMachine):
+    def __init__(self, acquire_probability, min_mean, max_mean, min_var, max_var):
+        super().__init__(acquire_probability)
         self._min_mean = min_mean
         self._max_mean = max_mean
         self._min_var = min_var
@@ -85,13 +102,17 @@ class StochasticGaussianArmAcquiringMachine(BanditMachine):
         new_arm_var = random.random() * (self._max_var - self._min_var) + self._min_var
         return GaussianBanditArm(new_arm_mean, new_arm_var)
     
-    def acquire_arms(self):
-        val = random.random()
-        if val < self._acquire_probability:
-            self.insert_arm(self.generate_arm())
-            return True
-        else:
-            return False
+class StochasticBernoulliArmAcquiringMachine(StochasticArmAcquiringMachine):
+    def __init__(self, acquire_probability, min_mean, max_mean):
+        super().__init__(acquire_probability)
+        self._min_mean = min_mean
+        self._max_mean = max_mean
+        return
+    
+    def generate_arm(self):
+        new_arm_mean = random.random() * (self._max_mean - self._min_mean) + self._min_mean
+        return BernoulliBanditArm(new_arm_mean)
+    
         
 class DeterministicArmAcquiringMachine(BanditMachine):
     def __init__(self, initial_arms: list[BanditArm], additional_arms: list[BanditArm], 

@@ -1,6 +1,7 @@
 from util.bandit_util import DeterministicArmAcquiringMachine, StandardBanditMachine, GaussianBanditArm, BernoulliBanditArm
 from algorithms.eps_greedy import eps_greedy, decay_eps_greedy, decay_eps_greedy2
 from algorithms.ucb import ucb_basic, auer, ucb_AO
+from algorithms.etc import etc
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -48,12 +49,31 @@ depsg2_alg = decay_eps_greedy2(bandit_machine, initial_eps, decay_constant)
 depsg2_regret, depsg2_reward, depsg2_exp_reward, depsg2_best_exp_reward = depsg2_alg.run_experiment(num_trials, num_rounds)
 
 
+# etc
+explore_rounds = 10
+etc_alg = etc(bandit_machine, explore_rounds)
+etc_regret, etc_reward, etc_exp_reward, etc_best_exp_reward = etc_alg.run_experiment(num_trials, num_rounds)
+
+# etc
+explore_rounds = 100
+etc_100_alg = etc(bandit_machine, explore_rounds)
+etc_100_regret, etc_100_reward, etc_100_exp_reward, etc_100_best_exp_reward = etc_100_alg.run_experiment(num_trials, num_rounds)
+
+# etc
+explore_rounds = 1000
+etc_1000_alg = etc(bandit_machine, explore_rounds)
+etc_1000_regret, etc_1000_reward, etc_1000_exp_reward, etc_1000_best_exp_reward = etc_1000_alg.run_experiment(num_trials, num_rounds)
+
+
 plt.plot(ucb_regret, 'b', label="ucb")
 plt.plot(auer_regret, 'purple', label="auer")
 plt.plot(ucbao_regret, 'orange', label="ucb-ao")
 plt.plot(epsg_regret, 'r', label="eps-greedy")
 plt.plot(depsg_regret, 'g', label="decay-eps-greedy")
 plt.plot(depsg2_regret, 'black', label="decay-eps-greedy-2")
+plt.plot(etc_regret, 'pink', label="etc-10")
+plt.plot(etc_100_regret, 'm', label="etc-100")
+plt.plot(etc_1000_regret, 'y', label="etc-1000")
 plt.xlabel('t')
 plt.ylabel('Regret')
 plt.title('Regret vs t')
