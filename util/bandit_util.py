@@ -37,7 +37,21 @@ class GaussianBanditArm(BanditArm):
 
     def pull(self):
         return np.random.normal(self._mean, self._variance, None)
+
+class ContextualBanditArm(BanditArm):
+    def __init__(self, mean, feature_vector):
+        self._mean = mean
+        self._feature_vector = feature_vector
+
+    def expected_reward(self):
+        return self._mean
     
+    def feature_vector(self):
+        return self._feature_vector
+
+    def pull(self):
+        return np.random.normal(self._mean, 1, None)
+
 class BanditMachine:
     def __init__(self):
         self.arms = []
@@ -93,6 +107,45 @@ class StochasticGaussianArmAcquiringMachine(BanditMachine):
         else:
             return False
         
+class StandardContextualArmAcquiringMachine(BanditMachine):
+    def __init__(self, dim = 10):
+        super().__init__()
+        self._dim = dim
+        self._theta_star = self.sample_unit_sphere(self._dim)
+        return
+    
+    def generate_arm(self):
+        new_feature_vector = self.sample_unit_sphere(self._dim)
+        new_arm_mean = np.dot(self._theta_star, new_feature_vector)
+        return ContextualBanditArm(new_arm_mean, new_feature_vector)
+    
+    
+    def sample_unit_sphere(self,d):
+        points = np.random.normal(size=(1,d))
+        # Normalize the points to have a unit length (i.e., lie on the unit sphere)
+        norms = np.linalg.norm(points, axis=1)
+        normalized_points = points / norms[:, np.newaxis]
+        return normalized_points[0]
+    
+    def acquire_arms(self):
+        return False
+        
+class StochasticContextualArmAcquiringMachine(StandardContextualArmAcquiringMachine):
+    def __init__(self, acquire_probability, dim = 10):
+        super().__init__()
+        self._acquire_probability = acquire_probability
+        self._dim = dim
+        self._theta_star = self.sample_unit_sphere(self._dim)
+        return
+    
+    def acquire_arms(self):
+        val = random.random()
+        if val < self._acquire_probability:
+            self.insert_arm(self.generate_arm())
+            return True
+        else:
+            return False
+
 class DeterministicArmAcquiringMachine(BanditMachine):
     def __init__(self, initial_arms: list[BanditArm], additional_arms: list[BanditArm], 
                  addition_times: list[int]):
