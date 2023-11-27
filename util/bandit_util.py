@@ -37,6 +37,29 @@ class GaussianBanditArm(BanditArm):
 
     def pull(self):
         return np.random.normal(self._mean, self._variance, None)
+
+class MVGaussianBanditArm(BanditArm):
+    def __init__(self, mean, variance, rho=1):
+        self._mean = mean
+        self._variance = variance
+        self._rho = rho
+
+    def expected_reward(self):
+        return self._mean - self._rho * self._variance
+
+    def pull(self):
+        return np.random.normal(self._mean, self._variance, None)
+
+class MVBernoulliBanditArm(BanditArm):
+    def __init__(self, mean, rho=1):
+        self._mean = mean
+        self._rho = rho
+
+    def expected_reward(self):
+        return self._mean - self.rho * self._mean * (1 - self._mean)
+
+    def pull(self):
+        return np.random.binomial(1, self._mean, None)
     
 class BanditMachine:
     def __init__(self):
