@@ -113,6 +113,27 @@ class StochasticBernoulliArmAcquiringMachine(StochasticArmAcquiringMachine):
         new_arm_mean = random.random() * (self._max_mean - self._min_mean) + self._min_mean
         return BernoulliBanditArm(new_arm_mean)
     
+class BernoulliArmAcquiringMachine(BanditMachine):
+    def __init__(self, num_rounds_per_acq, min_mean, max_mean):
+        self._num_rounds_per_acq = num_rounds_per_acq
+        self._min_mean = min_mean
+        self._max_mean = max_mean
+        self._t = 0
+        super().__init__()
+        return
+    
+    def generate_arm(self):
+        new_arm_mean = random.random() * (self._max_mean - self._min_mean) + self._min_mean
+        return BernoulliBanditArm(new_arm_mean)
+    
+    def acquire_arms(self):
+        if self._t % self._num_rounds_per_acq == 0:
+            self.insert_arm(self.generate_arm())
+            self._t += 1
+            return True
+        self._t += 1
+        return False
+    
         
 class DeterministicArmAcquiringMachine(BanditMachine):
     def __init__(self, initial_arms: list[BanditArm], additional_arms: list[BanditArm], 
