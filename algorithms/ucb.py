@@ -67,7 +67,7 @@ class ucb(BanditAlgorithm):
             total_best_exp_reward_per_round[t] = total_best_reward
 
 
-
+        print(bandit_machine.arms[np.argmax(U)])
         return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round
     
 class ucb_basic(ucb):

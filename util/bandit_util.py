@@ -38,29 +38,15 @@ class GaussianBanditArm(BanditArm):
     def pull(self):
         return np.random.normal(self._mean, self._variance, None)
 
-class MVGaussianBanditArm(BanditArm):
-    def __init__(self, mean, variance, rho=1):
-        self._mean = mean
-        self._variance = variance
-        self._rho = rho
+# class MVGaussianBanditArm(GaussianBanditArm):
+#     def __init__(self, mean, variance, rho=1):
+#         super(MVGaussianBanditArm, self).__init__(mean, variance)
+#         self._rho = rho
 
-    def expected_reward(self):
-        return self._mean - self._rho * self._variance
+#     def __str__(self): return f"{self.__class__.__name__}(mean={self._mean}, variance={self._variance}, expected_reward={self.expected_reward()})"
 
-    def pull(self):
-        return np.random.normal(self._mean, self._variance, None)
+#     def expected_reward(self): return self._mean -  self._rho * self._variance # Can only be compared with goodness values!
 
-class MVBernoulliBanditArm(BanditArm):
-    def __init__(self, mean, rho=1):
-        self._mean = mean
-        self._rho = rho
-
-    def expected_reward(self):
-        return self._mean - self.rho * self._mean * (1 - self._mean)
-
-    def pull(self):
-        return np.random.binomial(1, self._mean, None)
-    
 class BanditMachine:
     def __init__(self):
         self.arms = []

@@ -90,6 +90,7 @@ class eps_greedy(BanditAlgorithm):
             total_best_exp_reward += best_mean
             total_best_exp_reward_per_round[t] = total_best_exp_reward
 
+        print(bandit_machine.arms[sample_means.argmax()])
         return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round
 
 
