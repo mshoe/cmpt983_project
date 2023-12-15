@@ -1,22 +1,28 @@
 import numpy as np
 import random
 from util.bandit_util import BanditMachine
-from util.bandit_algorithm import BanditAlgorithm
+from util.bandit_algorithm import MVBanditAlgorithm
 import copy
 import abc
-class ucb(BanditAlgorithm):
-    def __init__(self, _bandit_machine: BanditMachine, rho=1, cutoff=0):
+
+class ucb(MVBanditAlgorithm):
+    def __init__(self, _bandit_machine: BanditMachine, rho=1, cutoffs=[0]):
         self._bandit_machine = copy.deepcopy(_bandit_machine)
         self._rho = rho
-        self._cutoff = cutoff
+        self._cutoffs = cutoffs
         return
     
     @abc.abstractmethod
-    def _get_std_coeff(self, t):
-        return
+    def _get_std_coeff(self, t): return
 
-    def run_alg(self, T: int):
-        bandit_machine = copy.deepcopy(self._bandit_machine)
+    def run_alg(self, T: int, bandit_machine=None):
+        if  bandit_machine is None:
+            bandit_machine = copy.deepcopy(self._bandit_machine)
+        else:
+            delta = 1.0 / T**2
+            max_var = max([a.variance() for a in self._bandit_machine.arms])
+            self._std_coeff = np.sqrt(2 * max_var * np.log(1.0 / delta))
+
         K = bandit_machine.num_arms
 
         U = np.ones(K) * np.inf
@@ -27,15 +33,27 @@ class ucb(BanditAlgorithm):
         total_reward = 0.0
         total_reward_per_round = np.zeros(T)
 
+        total_mv = 0
+        total_mv_per_round = np.zeros(T)
+
         total_exp_reward = 0.0
         total_exp_reward_per_round = np.zeros(T)
 
         total_best_reward = 0.0
         total_best_exp_reward_per_round = np.zeros(T)
 
-        best_mean, best_arm = bandit_machine.get_max_mean()
+        # Measures the amount the algorithm is below the mean of the optimal MEAN arm.
+        # This is a measure of bad results that we want to minimize
+        total_below_best_mean = 0.0
+        total_below_best_mean_per_round = np.zeros(T)
+        
+        total_best_mv = 0
+        total_best_mv_per_round = np.zeros(T)
 
-        count_below_cutoff = 0
+        best_mean, best_arm = bandit_machine.get_max_mean()
+        best_mv, _ = bandit_machine.get_max_mv(self._rho)
+
+        count_below_cutoff = np.zeros(len(self._cutoffs))
 
         for t in range(0, T):
 
@@ -52,6 +70,7 @@ class ucb(BanditAlgorithm):
                 N.resize(K)
                 goodness.resize(K)
                 best_mean, best_arm = bandit_machine.get_max_mean()
+                best_mv, _ = bandit_machine.get_max_mv(self._rho)
 
             a = np.argmax(U) # in case of ties, argmax returns the index of first occurance
             reward = bandit_machine.arms[a].pull()
@@ -70,41 +89,28 @@ class ucb(BanditAlgorithm):
             total_exp_reward += bandit_machine.arms[a].expected_reward()
             total_exp_reward_per_round[t] = total_exp_reward
 
+            total_mv += bandit_machine.arms[a].expected_mv_reward(self._rho)
+            total_best_mv += best_mv
             total_best_reward += best_mean
             total_best_exp_reward_per_round[t] = total_best_reward
+            total_best_mv_per_round[t] = total_best_mv
+            total_mv_per_round[t] = total_mv
 
-            count_below_cutoff += 1 if reward < self._cutoff else 0
+            for idx,c in enumerate(self._cutoffs):
+                count_below_cutoff[idx] += 1 if reward < c else 0
 
-        print(bandit_machine.arms[np.argmax(U)])
-        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff
+            total_below_best_mean += max(0, best_mean - reward)
+            total_below_best_mean_per_round[t] = total_below_best_mean
+
+        regret = total_best_exp_reward_per_round - total_exp_reward_per_round
+        regret_mv = total_best_mv_per_round - total_mv_per_round
+
+        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
     
-class ucb_basic(ucb):
-    def __init__(self, _bandit_machine: BanditMachine, T: int):
-        super().__init__(_bandit_machine)
-        delta = 1.0 / T**2
-        self._std_coeff = np.sqrt(2.0 * np.log(1.0/delta))
+class ucb_mv_basic(ucb):
+    def __init__(self, _bandit_machine: BanditMachine, T: int, **kwargs):
+        super().__init__(_bandit_machine, **kwargs)
+        self.T = T
         return
     
-    def _get_std_coeff(self, t):
-        return self._std_coeff
-    
-class auer(ucb):
-    def __init__(self, _bandit_machine: BanditMachine):
-        super().__init__(_bandit_machine)
-        return
-    
-    def _get_std_coeff(self, t):
-        # + 1.0 since t starts at 0
-        t = t + 1.0
-        return np.sqrt(8.0 * np.log(t))
-    
-class ucb_AO(ucb):
-    def __init__(self, _bandit_machine: BanditMachine):
-        super().__init__(_bandit_machine)
-        return
-    
-    def _get_std_coeff(self, t):
-        # + 1.0 since t starts at 0
-        t = t + 1.0
-        f = 1.0 + t * (np.log(t))**2
-        return np.sqrt(2.0 * np.log(f))
+    def _get_std_coeff(self, t): return self._std_coeff

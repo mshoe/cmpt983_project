@@ -29,6 +29,8 @@ class GaussianBanditArm(BanditArm):
         self._mean = mean
         self._variance = variance
 
+    def expected_mv_reward(self, rho): return self._mean - rho * self._variance
+
     def expected_reward(self):
         return self._mean
     
@@ -37,15 +39,6 @@ class GaussianBanditArm(BanditArm):
 
     def pull(self):
         return np.random.normal(self._mean, self._variance, None)
-
-# class MVGaussianBanditArm(GaussianBanditArm):
-#     def __init__(self, mean, variance, rho=1):
-#         super(MVGaussianBanditArm, self).__init__(mean, variance)
-#         self._rho = rho
-
-#     def __str__(self): return f"{self.__class__.__name__}(mean={self._mean}, variance={self._variance}, expected_reward={self.expected_reward()})"
-
-#     def expected_reward(self): return self._mean -  self._rho * self._variance # Can only be compared with goodness values!
 
 class BanditMachine:
     def __init__(self):
@@ -57,6 +50,10 @@ class BanditMachine:
         self.arms.append(arm)
         self.num_arms += 1
         return
+
+    def get_max_mv(self, rho):
+        arm_idx_to_mv = np.array([a.expected_mv_reward(rho) for a in self.arms])
+        return np.max(arm_idx_to_mv), self.arms[np.argmax(arm_idx_to_mv)]
 
     def get_max_mean(self):
         best_mean = 0

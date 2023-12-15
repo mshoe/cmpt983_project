@@ -1,17 +1,17 @@
 import numpy as np
 import random
 from util.bandit_util import BanditMachine
-from util.bandit_algorithm import BanditAlgorithm
+from util.bandit_algorithm import MVBanditAlgorithm
 import copy
 import abc
 
-class eps_greedy(BanditAlgorithm):
-    def __init__(self, _bandit_machine: BanditMachine, initial_eps, rho=1, cutoff=0):
+class eps_greedy(MVBanditAlgorithm):
+    def __init__(self, _bandit_machine: BanditMachine, initial_eps, rho=1, cutoffs=0):
         self._initial_eps = initial_eps
         self._curr_eps = initial_eps
         self._bandit_machine = copy.deepcopy(_bandit_machine)
         self._rho = rho
-        self._cutoff = cutoff
+        self._cutoffs = cutoffs
         return
     
     @abc.abstractmethod
@@ -19,8 +19,9 @@ class eps_greedy(BanditAlgorithm):
         # called once a round
         return self._initial_eps
     
-    def run_alg(self, T: int):
-        bandit_machine = copy.deepcopy(self._bandit_machine)
+    def run_alg(self, T: int, bandit_machine=None):
+        if  bandit_machine is None:
+            bandit_machine = copy.deepcopy(self._bandit_machine)
 
         init_num_arms = bandit_machine.num_arms
         
@@ -40,13 +41,27 @@ class eps_greedy(BanditAlgorithm):
         total_exp_reward_per_round = np.zeros(shape=(T,), dtype=float)
         total_exp_reward = 0.0
 
+        total_mv = 0
+        total_mv_per_round = np.zeros(T)
+
+        total_best_reward = 0.0
+        total_best_exp_reward_per_round = np.zeros(T)
+
+        # Measures the amount the algorithm is below the mean of the optimal MEAN arm.
+        # This is a measure of bad results that we want to minimize
+        total_below_best_mean = 0.0
+        total_below_best_mean_per_round = np.zeros(T)
+        
+        total_best_mv = 0
+        total_best_mv_per_round = np.zeros(T)
+
         # select arms until max rounds
         num_arms = init_num_arms
         all_arms_pulled_once = False
         
         self._curr_eps = self._initial_eps
-
-        count_below_cutoff = 0
+        best_mv, _ = bandit_machine.get_max_mv(self._rho)
+        count_below_cutoff = np.zeros(len(self._cutoffs))
 
         for t in range(0, T):
 
@@ -61,6 +76,7 @@ class eps_greedy(BanditAlgorithm):
                 best_mean, best_arm = bandit_machine.get_max_mean()
                 all_arms_pulled_once = False
                 self._curr_eps = self._initial_eps
+                best_mv, _ = bandit_machine.get_max_mv(self._rho)
 
             # exploit or explore
             val = random.random()
@@ -85,8 +101,8 @@ class eps_greedy(BanditAlgorithm):
             # update sample means and number of pulls
             sample_reward = bandit_machine.arms[a].pull()
             sample_means[a] = (sample_pulls[a] * sample_means[a] + sample_reward) / (sample_pulls[a] + 1.0)
-            sample_var[a] = (sample_var[a] * sample_pulls[a] + (sample_reward - sample_means[a]) ** 2) / (sample_pulls[a] + 1.0)
-            sample_goodness[a] = sample_means[a] - self._rho * sample_var[a]
+            sample_vars[a] = (sample_vars[a] * sample_pulls[a] + (sample_reward - sample_means[a]) ** 2) / (sample_pulls[a] + 1.0)
+            sample_goodness[a] = sample_means[a] - self._rho * sample_vars[a]
             sample_pulls[a] += 1
 
             # update reward and best reward for plots
@@ -96,18 +112,28 @@ class eps_greedy(BanditAlgorithm):
             total_exp_reward += bandit_machine.arms[a].expected_reward()
             total_exp_reward_per_round[t] = total_exp_reward
 
-            total_best_exp_reward += best_mean
-            total_best_exp_reward_per_round[t] = total_best_exp_reward
+            total_mv += bandit_machine.arms[a].expected_mv_reward(self._rho)
+            total_mv_per_round[t] = total_mv
+            total_best_mv += best_mv
+            total_best_mv_per_round[t] = total_best_mv
+            total_best_reward += best_mean
+            total_best_exp_reward_per_round[t] = total_best_reward
 
-            count_below_cutoff += 1 if sample_reward < self._cutoff else 0
+            for idx,c in enumerate(self._cutoffs):
+                count_below_cutoff[idx] += 1 if sample_reward < c else 0
 
-        print(bandit_machine.arms[sample_goodness.argmax()])
-        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round
+            total_below_best_mean += max(0, best_mean - sample_reward)
+            total_below_best_mean_per_round[t] = total_below_best_mean
+
+        regret = total_best_exp_reward_per_round - total_exp_reward_per_round
+        regret_mv = total_best_mv_per_round - total_mv_per_round
+
+        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
 
 
 class decay_eps_greedy(eps_greedy):
-    def __init__(self, _bandit_machine: BanditMachine, initial_eps, decay_factor, rho=1):
-        super().__init__(_bandit_machine, initial_eps)
+    def __init__(self, _bandit_machine: BanditMachine, initial_eps=.8, decay_factor=0.99, rho=1, **kwargs):
+        super().__init__(_bandit_machine, initial_eps, **kwargs)
         self._curr_eps = initial_eps
         self._decay_factor = decay_factor
         self._rho = rho
