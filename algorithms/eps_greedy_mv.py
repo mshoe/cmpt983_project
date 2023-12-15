@@ -67,7 +67,7 @@ class eps_greedy(MVBanditAlgorithm):
         for t in range(0, T):
 
             # check if arms are acquired this round
-            arms_added = bandit_machine.acquire_arms()
+            arms_added = bandit_machine.acquire_arms(t)
             if arms_added:
                 num_arms = bandit_machine.num_arms
                 sample_means.resize(num_arms)

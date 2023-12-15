@@ -91,9 +91,15 @@ class StochasticGaussianArmAcquiringMachine(BanditMachine):
         new_arm_var = random.random() * (self._max_var - self._min_var) + self._min_var
         return GaussianBanditArm(new_arm_mean, new_arm_var)
     
-    def acquire_arms(self):
+    def acquire_arms(self, t=None):
         val = random.random()
-        if val < self._acquire_probability:
+
+        if self._acquire_probability == "decay":
+            prob_acq = 1 / ((t+1) ** 0.5)
+        else:
+            prob_acq = self._acquire_probability 
+
+        if val < prob_acq:
             self.insert_arm(self.generate_arm())
             return True
         else:
