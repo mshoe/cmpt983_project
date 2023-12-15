@@ -54,6 +54,7 @@ class ucb(MVBanditAlgorithm):
         best_mv, _ = bandit_machine.get_max_mv(self._rho)
 
         count_below_cutoff = np.zeros(len(self._cutoffs))
+        count_below_cutoff_per_round = np.zeros(shape=(len(self._cutoffs), T))
 
         for t in range(0, T):
 
@@ -98,6 +99,7 @@ class ucb(MVBanditAlgorithm):
 
             for idx,c in enumerate(self._cutoffs):
                 count_below_cutoff[idx] += 1 if reward < c else 0
+                count_below_cutoff_per_round[idx][t] = count_below_cutoff[idx]
 
             total_below_best_mean += max(0, best_mean - reward)
             total_below_best_mean_per_round[t] = total_below_best_mean
@@ -105,7 +107,7 @@ class ucb(MVBanditAlgorithm):
         regret = total_best_exp_reward_per_round - total_exp_reward_per_round
         regret_mv = total_best_mv_per_round - total_mv_per_round
 
-        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
+        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff_per_round, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
     
 class ucb_mv_basic(ucb):
     def __init__(self, _bandit_machine: BanditMachine, T: int, **kwargs):

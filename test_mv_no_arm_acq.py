@@ -43,7 +43,7 @@ P.add_argument("--num_arms", type=int, default=10)
 P.add_argument("--num_rounds", type=int, default=10000)
 P.add_argument("--num_trials", type=int, default=20)
 P.add_argument("--rhos", type=float, default=[0, 0.5, 2], nargs="+")
-P.add_argument("--cutoffs", type=float, default=[0.3, .5, .7], nargs="+")
+P.add_argument("--cutoffs", type=float, default=[0.3, 0.6], nargs="+")
 P.add_argument("--min_mu", type=float, default=0.1)
 P.add_argument("--max_mu", type=float, default=0.9)
 P.add_argument("--min_var", type=float, default=0.05)
@@ -103,14 +103,15 @@ plt.grid(True)
 plt.savefig("fig-mv_regret.png")
 plt.close()
 
-for c,(rho,alg) in zip(colors, product(args.rhos, args.algs)):
-    _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
-    plt.plot(total_below_best_mean_per_round, color=c, label=f"{alg} - rho={rho}")
+for idx,cut in enumerate(args.cutoffs):
+    for c,(rho,alg) in zip(colors, product(args.rhos, args.algs)):
+        _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
+        plt.plot(count_below_cutoff[idx], color=c, label=f"{alg} - rho={rho}")
 
-plt.xlabel("Rounds")
-plt.ylabel("Cumulative Reward below Best Arm Mean")
-plt.title('Cumulative Reward below Best Arm Mean vs Round')
-plt.legend()
-plt.grid(True)
-plt.savefig("fig-mv_reward_below_mean.png")
-plt.close()
+    plt.xlabel("Rounds")
+    plt.ylabel(f"Cumulative number of rewards below cutoff={args.cutoffs[0]}")
+    plt.title(f"Cumulative number of rewards below cutoff={args.cutoffs[0]}")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f"fig-mv_cutoff_{cut}.png")
+    plt.close()

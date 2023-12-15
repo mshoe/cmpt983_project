@@ -62,6 +62,7 @@ class eps_greedy(MVBanditAlgorithm):
         self._curr_eps = self._initial_eps
         best_mv, _ = bandit_machine.get_max_mv(self._rho)
         count_below_cutoff = np.zeros(len(self._cutoffs))
+        count_below_cutoff_per_round = np.zeros(shape=(len(self._cutoffs), T))
 
         for t in range(0, T):
 
@@ -121,6 +122,7 @@ class eps_greedy(MVBanditAlgorithm):
 
             for idx,c in enumerate(self._cutoffs):
                 count_below_cutoff[idx] += 1 if sample_reward < c else 0
+                count_below_cutoff_per_round[idx][t] = count_below_cutoff[idx]
 
             total_below_best_mean += max(0, best_mean - sample_reward)
             total_below_best_mean_per_round[t] = total_below_best_mean
@@ -128,11 +130,11 @@ class eps_greedy(MVBanditAlgorithm):
         regret = total_best_exp_reward_per_round - total_exp_reward_per_round
         regret_mv = total_best_mv_per_round - total_mv_per_round
 
-        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
+        return total_reward_per_round, total_exp_reward_per_round, total_best_exp_reward_per_round, count_below_cutoff_per_round, total_best_mv_per_round, total_mv_per_round, regret, regret_mv, total_below_best_mean_per_round
 
 
 class decay_eps_greedy(eps_greedy):
-    def __init__(self, _bandit_machine: BanditMachine, initial_eps=.8, decay_factor=0.99, rho=1, **kwargs):
+    def __init__(self, _bandit_machine: BanditMachine, initial_eps=.5, decay_factor=0.995, rho=1, **kwargs):
         super().__init__(_bandit_machine, initial_eps, **kwargs)
         self._curr_eps = initial_eps
         self._decay_factor = decay_factor
