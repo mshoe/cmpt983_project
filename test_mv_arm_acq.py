@@ -57,8 +57,7 @@ P.add_argument("--min_var", type=float, default=0.05)
 P.add_argument("--max_var", type=float, default=0.2)
 P.add_argument("--seed", type=int, default=0)
 P.add_argument("--p_acc", type=float_or_str, default="decay")
-P.add_argument("--m", type=int, default=10)
-P.add_argument("--algs", choices=["ucb", "epsilon-greedy", "etc"], default=["ucb"], nargs="+")
+P.add_argument("--algs", choices=["ucb", "eps-greedy-0.99", "eps-greedy-0.995", "etc-5", "etc-10"], default=["ucb"], nargs="+")
 args = P.parse_args()
 random.seed(args.seed)
 np.random.seed(args.seed)
@@ -72,63 +71,58 @@ for rho in tqdm(args.rhos):
     for alg in tqdm(args.algs):
 
         if alg == "ucb":
-            algorithm = ucb_mv(bandit_machine, args.num_rounds,
-                rho=rho,
-                cutoffs=args.cutoffs)
-            result = algorithm.run_experiment(args.num_trials, args.num_rounds,
-                trial_to_bandit_machine=partial(get_new_bandit_machine, args))
-            rho2alg2results[rho]["ucb"] = list(result)
-        elif alg == "epsilon-greedy":
-            algorithm = decay_eps_greedy_mv(bandit_machine, args.num_rounds,
-                rho=rho,
-                cutoffs=args.cutoffs)
-            result = algorithm.run_experiment(args.num_trials, args.num_rounds,
-                trial_to_bandit_machine=partial(get_new_bandit_machine, args))
-            rho2alg2results[rho]["epsilon-greedy"] = list(result)
-        elif alg == "etc":
-            algorithm = etc_mv(bandit_machine,
-                m=args.m,
-                rho=rho,
-                cutoffs=args.cutoffs)
-            result = algorithm.run_experiment(args.num_trials, args.num_rounds,
-                trial_to_bandit_machine=partial(get_new_bandit_machine, args))
-            rho2alg2results[rho]["etc"] = list(result)
+            algorithm = ucb_mv(bandit_machine, args.num_rounds, rho=rho, cutoffs=args.cutoffs)
+        elif alg.startswith("eps-greedy"):
+            decay = float(alg.replace("eps-greedy-", ""))
+            algorithm = decay_eps_greedy_mv(bandit_machine, args.num_rounds, decay_factor=decay, rho=rho, cutoffs=args.cutoffs)
+        elif alg.startswith("etc"):
+            m = int(alg.replace("etc-", ""))
+            algorithm = etc_mv(bandit_machine, m=m, rho=rho, cutoffs=args.cutoffs)
+        
+        rho2alg2results[rho][alg] = list(algorithm.run_experiment(args.num_trials, args.num_rounds,
+                trial_to_bandit_machine=partial(get_new_bandit_machine, args)))
 
-# Plot normal regret
-for c,(rho,alg) in zip(colors, product(args.rhos, args.algs)):
-    _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
-    plt.plot(regret, color=c, label=f"{alg} - rho={rho}")
+# Plot normal regret for just UCB
+for rho in tqdm(args.rhos):
+    for alg in tqdm(args.algs):
+        if alg.startswith("ucb"):
+            _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
+            plt.plot(regret, label=f"{alg} - rho={rho}")
 
 plt.xlabel("Rounds")
 plt.ylabel("Regret - unadjusted for variance")
 plt.title('Unadjusted Regret vs Round')
 plt.legend()
 plt.grid(True)
-plt.savefig("fig-regret.png")
+plt.savefig("fig_acq-ucb-regret.png")
 plt.close()
 
-# Plot MV regret
-for c,(rho,alg) in zip(colors, product(args.rhos, args.algs)):
-    _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
-    plt.plot(regret_mv, color=c, label=f"{alg} - rho={rho}")
-
-plt.xlabel("Rounds")
-plt.ylabel("Mean-Variance Regret")
-plt.title('Mean-Variance Regret vs Round')
-plt.legend()
-plt.grid(True)
-plt.savefig("fig-mv_regret.png")
-plt.close()
-
-for idx,cut in enumerate(args.cutoffs):
-    for c,(rho,alg) in zip(colors, product(args.rhos, args.algs)):
+# Plot MV regret, one plot for each rho—we want to compare algorithms
+for rho in args.rhos:
+    for c,alg in zip(colors, args.algs):
         _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
-        plt.plot(count_below_cutoff[idx], color=c, label=f"{alg} - rho={rho}")
+        plt.plot(regret_mv, color=c, label=alg) 
 
     plt.xlabel("Rounds")
-    plt.ylabel(f"Cumulative number of rewards below cutoff={args.cutoffs[0]}")
-    plt.title(f"Cumulative number of rewards below cutoff={args.cutoffs[0]}")
+    plt.ylabel("Mean-Variance Regret")
+    plt.title(f"Mean-Variance Regret vs Round - rho={rho}")
     plt.legend()
     plt.grid(True)
-    plt.savefig(f"fig-mv_cutoff_{cut}.png")
+    plt.savefig(f"fig_acq-mv_regret_rho{rho}.png")
     plt.close()
+
+# Plot the amount below a cutoff for each algorithm on a log scale. One plot for each
+# cutoff value x algorithm
+for idx,cut in enumerate(args.cutoffs):
+    for alg in args.algs:
+        for c,rho in zip(colors, args.rhos):
+            _, _, _, count_below_cutoff, _, _, regret, regret_mv, total_below_best_mean_per_round = rho2alg2results[rho][alg]
+            plt.plot(count_below_cutoff[idx], color=c, label=f"{alg} - rho={rho}")
+
+        plt.xlabel("Rounds")
+        plt.ylabel(f"Cumulative number of rewards below cutoff={args.cutoffs[0]}")
+        plt.title(f"Cumulative number of rewards below cutoff={args.cutoffs[0]} - {alg}")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f"fig_acq_acq-mv_cutoff_{cut}_{alg}.png")
+        plt.close()
